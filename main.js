@@ -1,4 +1,4 @@
-﻿﻿import express from "express";
+﻿import express from "express";
 import cors from "cors";
 import { registerAddSongRoute } from "./routes/add-song.js";
 import { registerSkipRoute } from "./routes/skip.js";
