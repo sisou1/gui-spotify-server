@@ -10,7 +10,11 @@ const REFRESH_TOKEN = process.env.REFRESH_TOKEN;
 
 let accessToken = null;
 
+console.log("🚀 SERVEUR SPOTIFY DEMARRÉ");
+
 async function refreshAccessToken() {
+
+    console.log("🔄 REFRESH TOKEN...");
 
     const response = await axios.post(
         "https://accounts.spotify.com/api/token",
@@ -32,19 +36,41 @@ async function refreshAccessToken() {
     );
 
     accessToken = response.data.access_token;
+
+    console.log("✅ TOKEN REFRESH OK");
 }
+
+app.get("/", (req, res) => {
+
+    console.log("👀 PING RECU");
+
+    res.send("alive");
+});
 
 app.post("/add-song", async (req, res) => {
 
+    console.log("📩 REQUETE /add-song RECUE");
+
     try {
 
-        const query = req.body.query;
+        const { query, user } = req.body;
 
-        if (!query)
+        console.log("👤 USER :", user);
+        console.log("🎵 QUERY :", query);
+
+        if (!query) {
+
+            console.log("❌ QUERY MANQUANTE");
+
             return res.send("missing query");
+        }
 
-        if (!accessToken)
+        if (!accessToken) {
+
+            console.log("🔑 TOKEN MANQUANT");
+
             await refreshAccessToken();
+        }
 
         const search = await axios.get(
             "https://api.spotify.com/v1/search",
@@ -64,8 +90,19 @@ app.post("/add-song", async (req, res) => {
         const track =
             search.data.tracks.items[0];
 
-        if (!track)
+        if (!track) {
+
+            console.log("❌ TRACK INTROUVABLE");
+
             return res.send("track not found");
+        }
+
+        console.log(
+            "🎧 TRACK TROUVEE :",
+            track.name,
+            "-",
+            track.artists[0].name
+        );
 
         await axios.post(
             "https://api.spotify.com/v1/me/player/queue",
@@ -81,18 +118,23 @@ app.post("/add-song", async (req, res) => {
             }
         );
 
+        console.log("✅ TRACK AJOUTEE A LA QUEUE");
+
         res.send("added");
 
     } catch (err) {
 
+        console.error("❌ ERREUR SERVEUR :", err.message);
+
         if (err.response?.status === 401) {
+
+            console.log("🔁 RETRY TOKEN REFRESH");
 
             await refreshAccessToken();
 
             return res.send("retry");
         }
 
-        console.error(err);
         res.send("error");
     }
 });
