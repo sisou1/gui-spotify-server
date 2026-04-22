@@ -2,9 +2,9 @@
 import { setLastSkipEvent } from "../services/widget-state.js";
 
 export function registerSkipRoute(app) {
-  app.post("/skip", async (req, res) => {
+  const handleSkip = async (req, res) => {
     try {
-      const user = req.body?.user;
+      const user = req.body?.user || req.query?.user;
       if (isRecentDuplicateRequest(user, "__skip__")) {
         return res.send("duplicate");
       }
@@ -13,8 +13,11 @@ export function registerSkipRoute(app) {
       setLastSkipEvent();
       return res.send("skipped");
     } catch (error) {
-      console.error("POST /skip failed:", error.response?.data || error.message);
+      console.error(`${req.method} /skip failed:`, error.response?.data || error.message);
       return res.status(500).send("error");
     }
-  });
+  };
+
+  app.post("/skip", handleSkip);
+  app.get("/skip", handleSkip);
 }
