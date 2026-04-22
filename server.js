@@ -18,6 +18,26 @@ const REFRESH_TOKEN = process.env.REFRESH_TOKEN;
 
 let accessToken = null;
 
+// 🧠 ANTI-DUPLICATE CACHE
+const recentRequests = new Map();
+
+function isDuplicate(user, query) {
+    const key = `${user}:${query}`;
+    const now = Date.now();
+
+    if (recentRequests.has(key)) {
+        const last = recentRequests.get(key);
+
+        // 10 secondes anti-spam
+        if (now - last < 10000) {
+            return true;
+        }
+    }
+
+    recentRequests.set(key, now);
+    return false;
+}
+
 console.log("🚀 SERVEUR SPOTIFY DEMARRÉ");
 
 async function refreshAccessToken() {
@@ -49,9 +69,7 @@ async function refreshAccessToken() {
 }
 
 app.get("/", (req, res) => {
-
     console.log("👀 PING RECU");
-
     res.send("alive");
 });
 
@@ -66,17 +84,19 @@ app.post("/add-song", async (req, res) => {
         console.log("👤 USER :", user);
         console.log("🎵 QUERY :", query);
 
+        // 🛑 ANTI DUPLICATE
+        if (isDuplicate(user, query)) {
+            console.log("⛔ DUPLICATE BLOCKED");
+            return res.send("duplicate");
+        }
+
         if (!query) {
-
             console.log("❌ QUERY MANQUANTE");
-
             return res.send("missing query");
         }
 
         if (!accessToken) {
-
             console.log("🔑 TOKEN MANQUANT");
-
             await refreshAccessToken();
         }
 
@@ -99,9 +119,7 @@ app.post("/add-song", async (req, res) => {
             search.data.tracks.items[0];
 
         if (!track) {
-
             console.log("❌ TRACK INTROUVABLE");
-
             return res.send("track not found");
         }
 
@@ -126,23 +144,21 @@ app.post("/add-song", async (req, res) => {
             }
         );
 
-        console.log("✅ TRACK AJOUTEE A LA QUEUE");
+        console.log("✅ ADDED TO QUEUE");
 
         res.send("added");
 
     } catch (err) {
 
         console.error(
-            "❌ ERREUR SERVEUR :",
+            "❌ ERROR :",
             err.response?.data || err.message
         );
 
+        // 🔁 AUTO REFRESH TOKEN SI EXPIRE
         if (err.response?.status === 401) {
-
-            console.log("🔁 RETRY TOKEN REFRESH");
-
+            console.log("🔁 TOKEN EXPIRED → REFRESH");
             await refreshAccessToken();
-
             return res.send("retry");
         }
 
