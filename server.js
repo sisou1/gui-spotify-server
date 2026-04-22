@@ -3,8 +3,15 @@ import axios from "axios";
 import cors from "cors";
 
 const app = express();
+
 app.use(cors());
+app.options("*", cors());
 app.use(express.json());
+
+app.use((req, res, next) => {
+    console.log("🌐 HTTP:", req.method, req.url);
+    next();
+});
 
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
@@ -126,7 +133,10 @@ app.post("/add-song", async (req, res) => {
 
     } catch (err) {
 
-        console.error("❌ ERREUR SERVEUR :", err.message);
+        console.error(
+            "❌ ERREUR SERVEUR :",
+            err.response?.data || err.message
+        );
 
         if (err.response?.status === 401) {
 
