@@ -8,8 +8,18 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.use((req, _res, next) => {
-  console.log(`HTTP ${req.method} ${req.url}`);
+app.use((req, res, next) => {
+  const bodyLog = req.body && Object.keys(req.body).length ? JSON.stringify(req.body) : "{}";
+  console.log(`[REQ] ${req.method} ${req.url} body=${bodyLog}`);
+
+  const originalSend = res.send.bind(res);
+  res.send = (payload) => {
+    const responseLog =
+      typeof payload === "string" ? payload : JSON.stringify(payload);
+    console.log(`[RES] ${req.method} ${req.url} status=${res.statusCode} body=${responseLog}`);
+    return originalSend(payload);
+  };
+
   next();
 });
 
