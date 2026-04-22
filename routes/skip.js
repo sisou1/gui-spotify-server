@@ -1,8 +1,13 @@
-﻿import { skipCurrentTrack } from "../services/spotify.js";
+﻿import { isRecentDuplicateRequest, skipCurrentTrack } from "../services/spotify.js";
 
 export function registerSkipRoute(app) {
-  app.post("/skip", async (_req, res) => {
+  app.post("/skip", async (req, res) => {
     try {
+      const user = req.body?.user;
+      if (isRecentDuplicateRequest(user, "__skip__")) {
+        return res.send("duplicate");
+      }
+
       await skipCurrentTrack();
       return res.send("skipped");
     } catch (error) {
